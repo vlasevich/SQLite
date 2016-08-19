@@ -1,11 +1,17 @@
 package com.home.vlas.sqlite.Helper;
 
+import android.content.ContentValues;
 import android.content.Context;
+import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
+import android.util.Log;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class DatabaseHelper extends SQLiteOpenHelper {
-    private static final String LOG=DatabaseHelper.class.getSimpleName();
+    private static final String TAG = DatabaseHelper.class.getSimpleName();
     private static final int DATABASE_VERSION=1;
     private static final String DATABASE_NAME="contactsManager";
 
@@ -64,4 +70,98 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
         onCreate(db);
     }
+
+    public long createToDo(ToDo toDo, long[] tagIds) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        ContentValues contentValues = new ContentValues();
+        contentValues.put(KEY_TODO, toDo.getNote());
+        contentValues.put(KEY_STATUS, toDo.getStatus());
+        contentValues.put(KEY_CREATED_AT, toDo.getCreated_at());
+
+        long todoId = db.insert(TABLE_TODO, null, contentValues);
+
+        for (long tagId : tagIds) {
+            createToDoTag(todoId, tagId);
+        }
+
+        return todoId;
+    }
+
+    public ToDo getToDo(long todoId) {
+        SQLiteDatabase db = this.getReadableDatabase();
+        String selectQuery = "SELECT * FROM " + TABLE_TODO
+                + "WHERE " + KEY_ID + "=" + todoId;
+        Log.i(TAG, selectQuery);
+        Cursor c = db.rawQuery(selectQuery, null);
+        if (c != null) {
+            c.moveToFirst();
+        }
+        ToDo toDo = new ToDo();
+        toDo.setId(c.getInt(c.getColumnIndex(KEY_ID)));
+        toDo.setNote(c.getString(c.getColumnIndex(KEY_TODO)));
+        toDo.setCreated_at(c.getString(c.getColumnIndex(KEY_CREATED_AT)));
+
+        return toDo;
+    }
+
+    public List<ToDo> getAllToDos() {
+        List<ToDo> todoList = new ArrayList<>();
+        String selectQuery = "SELECT * FROM " + TABLE_TODO;
+        Log.i(TAG, selectQuery);
+        SQLiteDatabase db = this.getReadableDatabase();
+        Cursor c = db.rawQuery(selectQuery, null);
+
+        if (c.moveToFirst()) {
+            do {
+                ToDo toDo = new ToDo();
+                toDo.setId(c.getInt(c.getColumnIndex(KEY_ID)));
+                toDo.setNote(c.getString(c.getColumnIndex(KEY_TODO)));
+                toDo.setCreated_at(c.getString(c.getColumnIndex(KEY_CREATED_AT)));
+
+                todoList.add(toDo);
+            } while (c.moveToNext());
+        }
+        return todoList;
+    }
+
+    public List<ToDo> getAllToDosByTag(String tagName) {
+        List<ToDo> toDoList = new ArrayList<>();
+        String selectQuery = "SELECT * FROM " + TABLE_TODO + "td, " + TABLE_TAG + " tg, " + TABLE_TODO_TAG + " tt, "
+                + "WHERE tg." + KEY_TAG_NAME + " = '" + tagName + "'"
+                + " AND tg." + KEY_ID + " = tt." + KEY_TAG_ID
+                + " AND td." + KEY_ID + " = tt." + KEY_TODO_ID;
+
+        Log.i(TAG, selectQuery);
+        SQLiteDatabase db = this.getReadableDatabase();
+        Cursor c = db.rawQuery(selectQuery, null);
+        if (c.moveToFirst()) {
+            do {
+                ToDo toDo = new ToDo();
+                toDo.setId(c.getInt((c.getColumnIndex(KEY_ID))));
+                toDo.setNote((c.getString(c.getColumnIndex(KEY_TODO))));
+                toDo.setCreated_at(c.getString(c.getColumnIndex(KEY_CREATED_AT)));
+                toDoList.add(toDo);
+            } while (c.moveToNext());
+        }
+        return toDoList;
+    }
+
+    public int updateToDo(ToDo todo) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        ContentValues values = new ContentValues();
+        values.put(KEY_TODO, todo.getNote());
+        values.put(KEY_STATUS, todo.getStatus());
+
+        return db.update(TABLE_TODO, values, KEY_ID + " =?", new String[]{String.valueOf(todo.getId())});
+    }
+
+    public void deleteToDo(long toDoId) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        db.delete(TABLE_TODO, KEY_ID + "=?", new String[]{String.valueOf(toDoId)});
+    }
+
+    private void createToDoTag(long todoId, long tagId) {
+    }
+
+
 }
