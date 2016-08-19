@@ -1,4 +1,4 @@
-package com.home.vlas.sqlite.Helper;
+package com.home.vlas.sqlite.model;
 
 public class ToDo {
     int id;

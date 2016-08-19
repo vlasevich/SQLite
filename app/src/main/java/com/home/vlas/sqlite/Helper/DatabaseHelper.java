@@ -7,6 +7,9 @@ import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.util.Log;
 
+import com.home.vlas.sqlite.model.Tag;
+import com.home.vlas.sqlite.model.ToDo;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -158,6 +161,81 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     public void deleteToDo(long toDoId) {
         SQLiteDatabase db = this.getWritableDatabase();
         db.delete(TABLE_TODO, KEY_ID + "=?", new String[]{String.valueOf(toDoId)});
+    }
+
+    //////TAG///////
+    public long createTag(Tag tag) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        ContentValues values = new ContentValues();
+        values.put(KEY_TAG_NAME, tag.getTagName());
+        values.put(KEY_CREATED_AT, getDateTime());
+
+        long tagId = db.insert(TABLE_TAG, null, values);
+        return tagId;
+    }
+
+    public List<Tag> getAllTags() {
+        List<Tag> tagList = new ArrayList<>();
+        String selectQuery = "SELECT  * FROM " + TABLE_TAG;
+        Log.i(TAG, selectQuery);
+
+        SQLiteDatabase db = this.getReadableDatabase();
+        Cursor c = db.rawQuery(selectQuery, null);
+        if (c.moveToFirst()) {
+            do {
+                Tag t = new Tag();
+                t.setId(c.getInt((c.getColumnIndex(KEY_ID))));
+                t.setTagName(c.getString(c.getColumnIndex(KEY_TAG_NAME)));
+                tagList.add(t);
+            } while (c.moveToNext());
+        }
+        return tagList;
+    }
+
+    public int updateTag(Tag tag) {
+        SQLiteDatabase db = this.getWritableDatabase();
+
+        ContentValues values = new ContentValues();
+        values.put(KEY_TAG_NAME, tag.getTagName());
+
+        return db.update(TABLE_TAG, values, KEY_ID + " = ?",
+                new String[]{String.valueOf(tag.getId())});
+    }
+
+    public void deleteTag(Tag tag, boolean shouldDeleteAllTagTodos) {
+        SQLiteDatabase db = this.getWritableDatabase();
+        // before deleting tag
+        // check if todos under this tag should also be deleted
+        if (shouldDeleteAllTagTodos) {
+            List<ToDo> allTagsToDos = getAllToDosByTag(tag.getTagName());
+
+            //delete all todos
+            for (ToDo toDo : allTagsToDos) {
+                //delete toDo
+                deleteToDo(toDo.getId());
+            }
+        }
+        db.delete(TABLE_TAG, KEY_ID + "=?", new String[]{String.valueOf(tag.getId())});
+    }
+
+    public int updateNoteTag(long id, long tag_id) {
+        SQLiteDatabase db = this.getWritableDatabase();
+
+        ContentValues values = new ContentValues();
+        values.put(KEY_TAG_ID, tag_id);
+
+        return db.update(TABLE_TODO, values, KEY_ID + " = ?",
+                new String[]{String.valueOf(id)});
+    }
+
+    public void closeDB() {
+        SQLiteDatabase db = this.getReadableDatabase();
+        if (db != null && db.isOpen())
+            db.close();
+    }
+
+    private String getDateTime() {
+        return null;
     }
 
     private void createToDoTag(long todoId, long tagId) {
