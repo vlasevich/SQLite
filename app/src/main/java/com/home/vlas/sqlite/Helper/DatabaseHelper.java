@@ -10,12 +10,16 @@ import android.util.Log;
 import com.home.vlas.sqlite.model.Tag;
 import com.home.vlas.sqlite.model.ToDo;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
+import java.util.Locale;
+
 
 public class DatabaseHelper extends SQLiteOpenHelper {
     private static final String TAG = DatabaseHelper.class.getSimpleName();
-    private static final int DATABASE_VERSION=1;
+    private static final int DATABASE_VERSION = 2;
     private static final String DATABASE_NAME="contactsManager";
 
     private static final String TABLE_TODO="todos";
@@ -35,24 +39,24 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
     private static final String CREATE_TABLE_TODO="CREATE TABLE "
             +TABLE_TODO
-            +"("+KEY_ID+" INTEGER PRIMARY KEY,"
-            +KEY_TODO +"TEXT,"
-            +KEY_STATUS+"INTEGER,"
-            +KEY_CREATED_AT+"DATETIME"+")";
+            + " ( " + KEY_ID + " INTEGER PRIMARY KEY,"
+            + KEY_TODO + " TEXT, "
+            + KEY_STATUS + " INTEGER, "
+            + KEY_CREATED_AT + " DATETIME " + ");";
 
     private static final String CREATE_TABLE_TAG = "CREATE TABLE "
             + TABLE_TAG
-            + "(" + KEY_ID + " INTEGER PRIMARY KEY,"
+            + " ( " + KEY_ID + " INTEGER PRIMARY KEY,"
             + KEY_TAG_NAME + " TEXT,"
             + KEY_CREATED_AT
-            + " DATETIME" + ")";
+            + " DATETIME" + " )";
 
     private static final String CREATE_TABLE_TODO_TAG = "CREATE TABLE "
             + TABLE_TODO_TAG
-            + "(" + KEY_ID + " INTEGER PRIMARY KEY,"
+            + " ( " + KEY_ID + " INTEGER PRIMARY KEY,"
             + KEY_TODO_ID + " INTEGER,"
             + KEY_TAG_ID + " INTEGER,"
-            + KEY_CREATED_AT + " DATETIME" + ")";
+            + KEY_CREATED_AT + " DATETIME" + " )";
 
     public DatabaseHelper(Context context) {
         super(context, DATABASE_NAME, null, DATABASE_VERSION);
@@ -79,7 +83,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         ContentValues contentValues = new ContentValues();
         contentValues.put(KEY_TODO, toDo.getNote());
         contentValues.put(KEY_STATUS, toDo.getStatus());
-        contentValues.put(KEY_CREATED_AT, toDo.getCreated_at());
+        contentValues.put(KEY_CREATED_AT, getDateTime());
 
         long todoId = db.insert(TABLE_TODO, null, contentValues);
 
@@ -129,10 +133,11 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
     public List<ToDo> getAllToDosByTag(String tagName) {
         List<ToDo> toDoList = new ArrayList<>();
-        String selectQuery = "SELECT * FROM " + TABLE_TODO + "td, " + TABLE_TAG + " tg, " + TABLE_TODO_TAG + " tt, "
-                + "WHERE tg." + KEY_TAG_NAME + " = '" + tagName + "'"
-                + " AND tg." + KEY_ID + " = tt." + KEY_TAG_ID
-                + " AND td." + KEY_ID + " = tt." + KEY_TODO_ID;
+        String selectQuery = "SELECT  * FROM " + TABLE_TODO + " td, "
+                + TABLE_TAG + " tg, " + TABLE_TODO_TAG + " tt WHERE tg."
+                + KEY_TAG_NAME + " = '" + tagName + "'" + " AND tg." + KEY_ID
+                + " = " + "tt." + KEY_TAG_ID + " AND td." + KEY_ID + " = "
+                + "tt." + KEY_TODO_ID;
 
         Log.i(TAG, selectQuery);
         SQLiteDatabase db = this.getReadableDatabase();
@@ -147,6 +152,17 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             } while (c.moveToNext());
         }
         return toDoList;
+    }
+
+    public int getToDoCount() {
+        String countQuery = "SELECT  * FROM " + TABLE_TODO;
+        SQLiteDatabase db = this.getReadableDatabase();
+        Cursor cursor = db.rawQuery(countQuery, null);
+
+        int count = cursor.getCount();
+        cursor.close();
+
+        return count;
     }
 
     public int updateToDo(ToDo todo) {
@@ -235,10 +251,23 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     }
 
     private String getDateTime() {
-        return null;
+        SimpleDateFormat dateFormat = new SimpleDateFormat(
+                "yyyy-MM-dd HH:mm:ss", Locale.getDefault());
+        Date date = new Date();
+        return dateFormat.format(date);
     }
 
-    private void createToDoTag(long todoId, long tagId) {
+    public long createToDoTag(long todoId, long tagId) {
+        SQLiteDatabase db = this.getWritableDatabase();
+
+        ContentValues values = new ContentValues();
+        values.put(KEY_TODO_ID, todoId);
+        values.put(KEY_TAG_ID, tagId);
+        values.put(KEY_CREATED_AT, getDateTime());
+
+        long id = db.insert(TABLE_TODO_TAG, null, values);
+
+        return id;
     }
 
 
